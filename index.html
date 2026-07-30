@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VESTIAIRE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <nav class="nav">
+    <a href="#" class="logo">VESTIAIRE</a>
+    <div class="nav-links">
+      <a href="#">Accueil</a><a href="#">Homme</a><a href="#">Femme</a><a href="#">Accessoires</a>
+      <a href="#" class="sale">Soldes</a>
+    </div>
+    <div class="nav-right">
+      <button class="cart-btn" id="cartBtn" type="button" aria-label="Panier">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h2l2.4 12.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L22 7H6"/><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/></svg>
+        <span class="cart-count" id="cartCount" style="display:none;">0</span>
+      </button>
+      <button class="manage-btn" id="toggleAdmin" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 3.3a1 1 0 0 1 1.4 0l1.6 1.6a1 1 0 0 1 0 1.4L7 17l-4 1 1-4z"/></svg>
+        Gérer la boutique
+      </button>
+    </div>
+  </nav>
+
+  <!-- ADMIN PANEL -->
+  <div class="admin-panel" id="adminPanel">
+    <div class="admin-topbar" id="adminTopbar" style="display:none;">
+      <button class="logout-link" id="logoutBtn" type="button">Se déconnecter</button>
+    </div>
+    <div class="admin-inner">
+      <div class="admin-card" id="loginCard">
+        <h3>Connexion administrateur</h3>
+        <div class="sub">Réservé au propriétaire de la boutique. Les clients ne voient pas ce formulaire.</div>
+        <form id="loginForm">
+          <div class="field-row">
+            <div class="field">
+              <label>Identifiant</label>
+              <input type="text" id="loginEmail" autocomplete="username" required>
+            </div>
+            <div class="field">
+              <label>Mot de passe</label>
+              <input type="password" id="loginPassword" autocomplete="current-password" required>
+            </div>
+          </div>
+          <button type="submit" class="admin-submit">Se connecter</button>
+          <div class="admin-msg" id="loginMsg"></div>
+        </form>
+      </div>
+
+      <div class="admin-card" id="productCard" style="display:none;">
+        <h3>Ajouter / modifier un produit</h3>
+        <div class="sub">Logo ou photo, nom, prix en F CFA et catégorie — modifiables à tout moment via le bouton "crayon" sur chaque produit.</div>
+        <form id="productForm">
+          <div class="field-row">
+            <div class="field">
+              <label>Photo / logo du produit</label>
+              <input type="file" accept="image/*" id="prodImg" required>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Nom du produit</label>
+              <input type="text" id="prodName" placeholder="Ex. Manteau en laine" required>
+            </div>
+            <div class="field">
+              <label>Prix (F CFA)</label>
+              <input type="number" id="prodPrice" step="500" min="0" placeholder="Ex. 25000" required>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Catégorie</label>
+              <select id="prodCat">
+                <option value="Vêtements">Vêtements</option>
+                <option value="Chaussures">Chaussures</option>
+                <option value="Objets">Objets</option>
+                <option value="Sport">Sport</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-row" style="align-items:center; gap:14px;">
+            <button type="submit" class="admin-submit" id="prodSubmitBtn">Ajouter le produit</button>
+            <button type="button" class="admin-cancel" id="prodCancelBtn" style="display:none;">Annuler la modification</button>
+          </div>
+          <div class="admin-msg" id="prodMsg"></div>
+        </form>
+      </div>
+
+      <div class="admin-card" id="adCard" style="display:none;">
+        <h3>Ajouter une publicité (bannière défilante)</h3>
+        <div class="sub">Image + titre + sous-titre — vient s'ajouter au carrousel en haut de page.</div>
+        <form id="adForm">
+          <div class="field-row">
+            <div class="field">
+              <label>Image de la bannière</label>
+              <input type="file" accept="image/*" id="adImg" required>
+            </div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Titre</label>
+              <input type="text" id="adTitle" placeholder="Ex. Soldes d'été — jusqu'à -40%" required>
+            </div>
+            <div class="field">
+              <label>Sous-titre (optionnel)</label>
+              <input type="text" id="adSub" placeholder="Ex. Valable jusqu'au 15 août">
+            </div>
+          </div>
+          <button type="submit" class="admin-submit">Ajouter la publicité</button>
+          <div class="admin-msg" id="adMsg"></div>
+        </form>
+        <div class="admin-hint">Les prix sont désormais en F CFA. Le bouton "Changer l'image" est toujours visible directement sur le visuel principal en haut de page (à côté du badge -50%). Sur chaque produit, le crayon permet de modifier son nom, son prix ou son logo/photo à tout moment, et le "×" le retire.</div>
+      </div>
+
+      <div class="admin-card" id="ordersCard" style="display:none;">
+        <h3>Commandes reçues</h3>
+        <div class="sub">Commandes validées par les clients depuis le panier.</div>
+        <div id="ordersList" class="orders-list"></div>
+      </div>
+
+      <div class="admin-card" id="messagesCard" style="display:none;">
+        <h3>Messages clients</h3>
+        <div class="sub">Sélectionnez une conversation pour répondre en direct.</div>
+        <div class="chat-admin">
+          <div id="conversationsList" class="conversations-list"></div>
+          <div class="chat-admin-thread">
+            <div id="adminChatMessages" class="chat-messages"></div>
+            <form id="adminChatForm" class="chat-input-row" style="display:none;">
+              <input type="text" id="adminChatInput" placeholder="Écrire une réponse..." autocomplete="off">
+              <button type="submit" class="admin-submit">Envoyer</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <section class="hero" style="padding:0;">
+    <div class="hero-left">
+      <div class="eyebrow"><span class="dash"></span>Nouvelle collection</div>
+      <h1 class="hero-title">ESSENTIELS<br><span class="accent">D'ÉTÉ</span></h1>
+      <div class="hero-strike"><span class="line"></span>Disponible dès maintenant<span class="line"></span></div>
+      <a href="#produits" class="btn">Acheter maintenant
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+    </div>
+    <div class="hero-right" id="heroRight">
+      <img class="hero-photo" id="heroPhoto" alt="Visuel de la collection" style="display:none;">
+      <svg class="hero-figures" id="heroFigures" viewBox="0 0 400 460" fill="none">
+        <ellipse cx="150" cy="440" rx="70" ry="14" fill="rgba(0,0,0,0.18)"/>
+        <ellipse cx="270" cy="445" rx="66" ry="13" fill="rgba(0,0,0,0.18)"/>
+        <circle cx="150" cy="120" r="34" fill="#e9ddc8"/>
+        <path d="M110 108c0-24 18-40 40-40s40 16 40 40" fill="#151210"/>
+        <rect x="95" y="150" width="110" height="180" rx="26" fill="#1c1712"/>
+        <rect x="118" y="330" width="64" height="90" rx="10" fill="#2a241c"/>
+        <circle cx="270" cy="115" r="32" fill="#3a2e22"/>
+        <rect x="232" y="145" width="106" height="185" rx="30" fill="#cbb894"/>
+        <rect x="252" y="330" width="66" height="90" rx="10" fill="#8a5c3b"/>
+      </svg>
+      <div class="off-badge"><span class="small">Jusqu'à</span><span class="big">-50%</span><span class="tiny">de remise</span></div>
+      <div class="hero-edit" id="heroEditWrap">
+        <button class="hero-edit-btn" id="heroEditBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 3.3a1 1 0 0 1 1.4 0l1.6 1.6a1 1 0 0 1 0 1.4L7 17l-4 1 1-4z"/></svg>
+          Changer l'image
+        </button>
+        <button class="hero-edit-btn reset" id="heroResetBtn" type="button" style="display:none;">Réinitialiser</button>
+        <input type="file" id="heroFileInput" accept="image/*" hidden>
+      </div>
+    </div>
+  </section>
+
+  <!-- AD CAROUSEL -->
+  <section class="carousel-section">
+    <div class="wrap">
+      <div class="carousel-head"><span class="tag-label">Bannière publicitaire</span></div>
+      <div class="carousel" id="carousel">
+        <div class="carousel-track" id="carouselTrack"></div>
+        <button class="carousel-arrow prev" id="carPrev" type="button" aria-label="Précédent">
+          <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <button class="carousel-arrow next" id="carNext" type="button" aria-label="Suivant">
+          <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+      <div class="carousel-dots" id="carouselDots"></div>
+    </div>
+  </section>
+
+  <div class="feature-strip">
+    <div class="feature"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c2 4-2 5-1 9 3-1 4-4 4-6 3 3 4 7 2 11-2 3.5-6 4-9 2.5-3-1.6-4-5-2.5-8.5C6.5 7 9 5 12 2z"/></svg></div><div class="feature-text"><div class="t1">Tendance</div><div class="t2">Les incontournables</div></div></div>
+    <div class="feature"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.6 6.1.8-4.4 4.2 1 6.1L12 16.8 6.7 19.7l1-6.1L3.3 9.4l6.1-.8z"/></svg></div><div class="feature-text"><div class="t1">Meilleures ventes</div><div class="t2">Nos préférées</div></div></div>
+    <div class="feature"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5-9 5-9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg></div><div class="feature-text"><div class="t1">Nouveautés</div><div class="t2">Nouveaux modèles</div></div></div>
+    <div class="feature"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="8" width="13" height="9" rx="1.5"/><path d="M15 11h4l3 3v3h-7z"/><circle cx="7" cy="19" r="1.6"/><circle cx="18" cy="19" r="1.6"/></svg></div><div class="feature-text"><div class="t1">Livraison rapide</div><div class="t2">Partout en Europe</div></div></div>
+  </div>
+
+  <section class="products" id="produits">
+    <div class="wrap">
+      <div class="section-title">Nos produits</div>
+      <div class="cat-filters" id="catFilters">
+        <button class="cat-filter active" data-cat="Tous" type="button">Tous</button>
+        <button class="cat-filter" data-cat="Vêtements" type="button">Vêtements</button>
+        <button class="cat-filter" data-cat="Chaussures" type="button">Chaussures</button>
+        <button class="cat-filter" data-cat="Sport" type="button">Sport</button>
+        <button class="cat-filter" data-cat="Objets" type="button">Objets</button>
+      </div>
+      <div class="product-grid" id="productGrid"></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand"><a href="#" class="logo">VESTIAIRE</a><p>Vêtements, chaussures et accessoires sélectionnés pour leur style et leur qualité.</p></div>
+      <div class="foot-col"><h4>Boutique</h4><a href="#">Nouveautés</a><a href="#">Homme</a><a href="#">Femme</a><a href="#">Soldes</a></div>
+      <div class="foot-col"><h4>Service client</h4><a href="#">Livraison</a><a href="#">Retours</a><a href="#">FAQ</a><a href="#">Contact</a></div>
+      <div class="foot-col"><h4>Informations</h4><a href="#">Mentions légales</a><a href="#">CGV</a><a href="#">Confidentialité</a><a href="#">Cookies</a></div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 Vestiaire — Nom provisoire, à définir avec vous.</span>
+      <span>Mentions légales · CGV · Confidentialité</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ORDER MODAL -->
+<div class="order-overlay" id="orderOverlay">
+  <div class="order-modal" id="orderModal">
+    <button class="order-close" id="orderCloseBtn" type="button" aria-label="Fermer">&times;</button>
+    <div class="order-product" id="orderProductInfo"></div>
+    <a class="btn-whatsapp" id="orderWhatsappBtn" target="_blank" rel="noopener">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.1-1.6-.8-1.9-.9-.2-.1-.4-.1-.6.1-.2.3-.7.9-.8 1-.2.2-.3.2-.5.1-1.4-.7-2.4-1.3-3.3-2.9-.3-.4.3-.4.7-1.3.1-.2 0-.4 0-.5-.1-.1-.6-1.4-.8-1.9-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.3.3-1 1-1 2.3 0 1.4 1 2.7 1.1 2.9.1.2 2 3 4.8 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.6-.7 1.9-1.3.2-.6.2-1.1.2-1.2 0-.2-.2-.2-.4-.3z"/><path d="M12 2a10 10 0 0 0-8.5 15.3L2 22l4.8-1.5A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.4-4.5-1.2l-.3-.2-3.2 1 1-3.1-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>
+      Commander via WhatsApp
+    </a>
+    <div class="order-divider">ou remplir le formulaire</div>
+    <form id="orderForm">
+      <div class="field">
+        <label>Votre nom</label>
+        <input type="text" id="orderName" required>
+      </div>
+      <div class="field">
+        <label>Votre téléphone</label>
+        <input type="tel" id="orderPhone" required>
+      </div>
+      <div class="field">
+        <label>Remarque (taille, couleur...)</label>
+        <input type="text" id="orderNote">
+      </div>
+      <button type="submit" class="admin-submit" id="orderSubmitBtn" style="width:100%;">Envoyer la commande</button>
+      <div class="admin-msg" id="orderMsg"></div>
+    </form>
+  </div>
+</div>
+
+<!-- CHAT WIDGET -->
+<button class="chat-toggle" id="chatToggleBtn" type="button" aria-label="Discuter avec la boutique">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4 9 9 0 0 1-3.6-.7L3 21l1.8-5.4A8.3 8.3 0 0 1 4 11.5 8.4 8.4 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z"/></svg>
+</button>
+<div class="chat-panel" id="chatPanel">
+  <div class="chat-panel-head">
+    <span>Discuter avec la boutique</span>
+    <button id="chatCloseBtn" type="button" aria-label="Fermer">&times;</button>
+  </div>
+  <div class="chat-messages" id="chatMessages"></div>
+  <form id="chatForm" class="chat-input-row">
+    <input type="text" id="chatInput" placeholder="Écrivez votre message..." autocomplete="off" required>
+    <button type="submit" class="admin-submit">Envoyer</button>
+  </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="script.js" defer></script>
+
+</body>
+</html>
