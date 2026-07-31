@@ -254,12 +254,13 @@
     }catch(e){ console.error('Erreur de sauvegarde produits', e); }
   }
   async function upsertProductRemote(p){
-    if(!supabase) return;
-    try{
-      const row = { id:p.id, img:p.img, name:p.name, price:p.price, cat:p.cat, badge:!!p.badge };
-      const { error } = await supabase.from('products').upsert(row);
-      if(error) console.error('Erreur de sauvegarde du produit', error);
-    }catch(e){ console.error('Erreur de sauvegarde du produit', e); }
+    if(!supabase) throw new Error('Connexion à la base de données indisponible.');
+    const row = { id:p.id, img:p.img, name:p.name, price:p.price, cat:p.cat, badge:!!p.badge };
+    const { error } = await supabase.from('products').upsert(row);
+    if(error){
+      console.error('Erreur de sauvegarde du produit', error);
+      throw new Error(error.message || 'Échec de l\'enregistrement du produit.');
+    }
   }
   async function deleteProductRemote(id){
     if(!supabase) return;
@@ -609,19 +610,18 @@
           if(dataUrl){ p.img = dataUrl; p.svg = null; p.bg = null; }
           savedProduct = p;
         }
-        msg.textContent = 'Produit mis à jour.';
       }else{
         const newProduct = { id:'prod-'+Date.now(), img:dataUrl, name, price, cat, badge:true };
         products.unshift(newProduct);
         savedProduct = newProduct;
-        msg.textContent = 'Produit ajouté à la boutique.';
       }
       if(savedProduct) await upsertProductRemote(savedProduct);
+      msg.textContent = editingId ? 'Produit mis à jour.' : 'Produit ajouté à la boutique.';
       renderProducts();
       resetProductForm();
       msg.className = 'admin-msg ok';
     }catch(err){
-      msg.textContent = editingId ? "Erreur lors de la modification du produit." : "Erreur lors de l'ajout du produit.";
+      msg.textContent = 'Erreur : ' + (err && err.message ? err.message : "l'enregistrement a échoué.");
       msg.className = 'admin-msg err';
     }
   });
