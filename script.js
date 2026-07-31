@@ -181,7 +181,7 @@
   const chatInput = document.getElementById('chatInput');
 
   const ADMIN_USER = 'admin';
-  const ADMIN_PASSWORD = '1234';
+  const ADMIN_PASSWORD = '1170r@ph';
   let cart = [];
   try{ cart = JSON.parse(localStorage.getItem('vestiaire:cart') || '[]'); }catch(e){ cart = []; }
   let clientId = localStorage.getItem('vestiaire:clientId');
