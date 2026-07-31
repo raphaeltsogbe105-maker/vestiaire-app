@@ -266,16 +266,27 @@
 
   /* ---------- admin: commandes / messages ---------- */
   .orders-list{display:flex; flex-direction:column; gap:10px; max-height:340px; overflow-y:auto;}
-  .order-entry{background:rgba(242,236,223,0.06); border:1px solid rgba(242,236,223,0.15); border-radius:6px; padding:10px 12px; font-size:12.5px;}
-  .order-entry .oe-head{display:flex; justify-content:space-between; font-weight:700; margin-bottom:4px;}
+  .order-entry{background:rgba(242,236,223,0.06); border:1px solid rgba(242,236,223,0.15); border-radius:6px; padding:10px 12px; font-size:12.5px; position:relative;}
+  .order-entry .oe-head{display:flex; justify-content:space-between; font-weight:700; margin-bottom:4px; padding-right:22px;}
   .order-entry .oe-items{color:rgba(242,236,223,0.7); margin-bottom:4px;}
   .order-entry .oe-total{color:var(--tan);}
+  .order-del{
+    position:absolute; top:8px; right:8px; width:20px; height:20px; border-radius:50%; border:none;
+    background:rgba(214,59,59,0.15); color:#e07a7a; font-size:14px; line-height:1; cursor:pointer;
+  }
+  .order-del:hover{background:#d63b3b; color:#fff;}
   .conversations-list{display:flex; flex-direction:column; gap:6px; max-height:200px; overflow-y:auto; margin-bottom:10px;}
+  .conv-row{display:flex; align-items:center; gap:6px;}
   .conv-entry{
-    background:rgba(242,236,223,0.06); border:1px solid rgba(242,236,223,0.15); border-radius:6px; padding:8px 10px;
+    flex:1; background:rgba(242,236,223,0.06); border:1px solid rgba(242,236,223,0.15); border-radius:6px; padding:8px 10px;
     font-size:12px; text-align:left; color:var(--cream); cursor:pointer;
   }
   .conv-entry.active{border-color:var(--tan); background:rgba(169,116,78,0.18);}
+  .conv-del{
+    width:22px; height:22px; flex-shrink:0; border-radius:50%; border:none;
+    background:rgba(214,59,59,0.15); color:#e07a7a; font-size:14px; line-height:1; cursor:pointer;
+  }
+  .conv-del:hover{background:#d63b3b; color:#fff;}
   .chat-admin{display:flex; flex-direction:column;}
   .chat-admin-thread .chat-messages{max-height:220px; background:rgba(242,236,223,0.06); border-radius:6px;}
   .chat-admin-thread .chat-bubble.admin{background:var(--tan-dark); color:#fff;}

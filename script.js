@@ -759,13 +759,26 @@
         const items = (o.items || []).map(it => `${it.name} ×${it.qty}`).join(', ');
         const date = o.created_at ? new Date(o.created_at).toLocaleString('fr-FR') : '';
         return `
-          <div class="order-entry">
+          <div class="order-entry" data-order-id="${o.id}">
+            <button type="button" class="order-del" data-order-id="${o.id}" aria-label="Supprimer la commande">×</button>
             <div class="oe-head"><span>${escapeHtml(o.customer_name)}</span><span>${formatPrice(o.total)}</span></div>
             <div class="oe-items">${escapeHtml(items)}</div>
             <div>${escapeHtml(o.phone)}${o.address ? ' — ' + escapeHtml(o.address) : ''}</div>
             <div class="oe-total">${date}</div>
           </div>`;
       }).join('');
+      ordersList.querySelectorAll('.order-del').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if(!confirm('Supprimer définitivement cette commande ?')) return;
+          const id = btn.dataset.orderId;
+          try{
+            await supabase.from('orders').delete().eq('id', id);
+            knownOrderIds && knownOrderIds.delete(id);
+            loadOrders(false);
+          }catch(err){ console.error('Erreur suppression commande', err); }
+        });
+      });
     }catch(e){ console.error('Erreur de chargement des commandes', e); }
   }
 
@@ -868,10 +881,30 @@
       }
       conversationsList.innerHTML = convIds.map(id => {
         const last = convMap[id];
-        return `<button type="button" class="conv-entry${id === currentAdminConversation ? ' active' : ''}" data-id="${id}">${escapeHtml(last.text).slice(0,40)}</button>`;
+        return `<div class="conv-row">
+          <button type="button" class="conv-entry${id === currentAdminConversation ? ' active' : ''}" data-id="${id}">${escapeHtml(last.text).slice(0,40)}</button>
+          <button type="button" class="conv-del" data-id="${id}" aria-label="Supprimer la conversation">×</button>
+        </div>`;
       }).join('');
       conversationsList.querySelectorAll('.conv-entry').forEach(btn => {
         btn.addEventListener('click', () => openAdminConversation(btn.dataset.id));
+      });
+      conversationsList.querySelectorAll('.conv-del').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if(!confirm('Supprimer définitivement cette conversation ?')) return;
+          const id = btn.dataset.id;
+          try{
+            await supabase.from('messages').delete().eq('conversation_id', id);
+            if(currentAdminConversation === id){
+              currentAdminConversation = null;
+              adminChatMessages.innerHTML = '';
+              adminChatForm.style.display = 'none';
+              if(adminConvPollTimer){ clearInterval(adminConvPollTimer); adminConvPollTimer = null; }
+            }
+            loadConversations();
+          }catch(err){ console.error('Erreur suppression conversation', err); }
+        });
       });
     }catch(e){ console.error('Erreur de chargement des conversations', e); }
   }
