@@ -164,6 +164,10 @@
     }catch(e){ /* audio not available, ignore */ }
   }
   const messagesCard = document.getElementById('messagesCard');
+  const messagesBadge = document.getElementById('messagesBadge');
+  const chatToggleBadge = document.getElementById('chatToggleBadge');
+  let knownAdminMsgIds = null;
+  let knownClientMsgIds = null;
   const ordersList = document.getElementById('ordersList');
   const conversationsList = document.getElementById('conversationsList');
   const adminChatMessages = document.getElementById('adminChatMessages');
@@ -521,12 +525,20 @@
       knownOrderIds = null;
       ordersBadge.style.display = 'none';
       ordersBadge.textContent = '0';
+      knownAdminMsgIds = null;
+      messagesBadge.style.display = 'none';
+      messagesBadge.textContent = '0';
     }
   }
 
   ordersCard.addEventListener('click', () => {
     ordersBadge.style.display = 'none';
     ordersBadge.textContent = '0';
+  });
+
+  messagesCard.addEventListener('click', () => {
+    messagesBadge.style.display = 'none';
+    messagesBadge.textContent = '0';
   });
 
   loginForm.addEventListener('submit', function(e){
@@ -767,7 +779,6 @@
     container.scrollTop = container.scrollHeight;
   }
 
-  let clientChatPollTimer = null;
   let adminConvListPollTimer = null;
   let adminConvPollTimer = null;
 
@@ -775,22 +786,34 @@
     chatPanel.classList.toggle('open');
     if(chatPanel.classList.contains('open')){
       loadClientChat();
-      if(!clientChatPollTimer) clientChatPollTimer = setInterval(loadClientChat, 5000);
-    }else if(clientChatPollTimer){
-      clearInterval(clientChatPollTimer);
-      clientChatPollTimer = null;
+      chatToggleBadge.style.display = 'none';
+      chatToggleBadge.textContent = '0';
     }
   });
   chatCloseBtn.addEventListener('click', () => {
     chatPanel.classList.remove('open');
-    if(clientChatPollTimer){ clearInterval(clientChatPollTimer); clientChatPollTimer = null; }
   });
 
   async function loadClientChat(){
     if(!supabase) return;
     try{
       const { data, error } = await supabase.from('messages').select('*').eq('conversation_id', clientId).order('created_at', {ascending:true});
-      if(!error && data) renderChatBubbles(chatMessages, data);
+      if(!error && data){
+        renderChatBubbles(chatMessages, data);
+        const currentIds = new Set(data.map(m => m.id));
+        if(knownClientMsgIds === null){
+          knownClientMsgIds = currentIds;
+        }else{
+          const newReplies = data.filter(m => m.sender === 'admin' && !knownClientMsgIds.has(m.id));
+          if(newReplies.length > 0 && !chatPanel.classList.contains('open')){
+            playOrderChime();
+            const unread = parseInt(chatToggleBadge.textContent || '0', 10) || 0;
+            chatToggleBadge.textContent = String(unread + newReplies.length);
+            chatToggleBadge.style.display = 'inline-flex';
+          }
+          knownClientMsgIds = currentIds;
+        }
+      }
     }catch(e){ console.error('Erreur de chargement du chat', e); }
     if(!clientChatChannel){
       clientChatChannel = supabase.channel('chat-client-' + clientId)
@@ -821,6 +844,21 @@
     try{
       const { data, error } = await supabase.from('messages').select('*').order('created_at', {ascending:true});
       if(error || !data) return;
+
+      const currentIds = new Set(data.map(m => m.id));
+      if(knownAdminMsgIds === null){
+        knownAdminMsgIds = currentIds;
+      }else{
+        const newFromClients = data.filter(m => m.sender === 'client' && !knownAdminMsgIds.has(m.id));
+        if(newFromClients.length > 0){
+          playOrderChime();
+          const unread = parseInt(messagesBadge.textContent || '0', 10) || 0;
+          messagesBadge.textContent = String(unread + newFromClients.length);
+          messagesBadge.style.display = 'inline-flex';
+        }
+        knownAdminMsgIds = currentIds;
+      }
+
       const convMap = {};
       data.forEach(m => { convMap[m.conversation_id] = m; });
       const convIds = Object.keys(convMap);
@@ -866,6 +904,7 @@
 
   updateCartBadge();
   updateAdminUI();
+  if(supabase){ loadClientChat(); setInterval(loadClientChat, 8000); }
 
   loadState().then(resetAutoplay);
 })();

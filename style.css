@@ -244,6 +244,7 @@
     box-shadow:0 6px 18px rgba(0,0,0,0.25);
   }
   .chat-toggle svg{width:24px; height:24px;}
+  .chat-toggle-badge{position:absolute; top:-4px; right:-4px;}
   .chat-panel{
     display:none; position:fixed; bottom:88px; right:22px; z-index:150; width:320px; max-width:90vw; height:420px; max-height:70vh;
     background:var(--cream); border-radius:8px; box-shadow:0 10px 30px rgba(0,0,0,0.3); flex-direction:column; overflow:hidden;
