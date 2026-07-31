@@ -511,8 +511,13 @@
       if(!ordersPollTimer){
         ordersPollTimer = setInterval(() => loadOrders(true), 15000);
       }
+      if(!adminConvListPollTimer){
+        adminConvListPollTimer = setInterval(loadConversations, 8000);
+      }
     }else{
       if(ordersPollTimer){ clearInterval(ordersPollTimer); ordersPollTimer = null; }
+      if(adminConvListPollTimer){ clearInterval(adminConvListPollTimer); adminConvListPollTimer = null; }
+      if(adminConvPollTimer){ clearInterval(adminConvPollTimer); adminConvPollTimer = null; }
       knownOrderIds = null;
       ordersBadge.style.display = 'none';
       ordersBadge.textContent = '0';
@@ -762,11 +767,24 @@
     container.scrollTop = container.scrollHeight;
   }
 
+  let clientChatPollTimer = null;
+  let adminConvListPollTimer = null;
+  let adminConvPollTimer = null;
+
   chatToggleBtn.addEventListener('click', () => {
     chatPanel.classList.toggle('open');
-    if(chatPanel.classList.contains('open')) loadClientChat();
+    if(chatPanel.classList.contains('open')){
+      loadClientChat();
+      if(!clientChatPollTimer) clientChatPollTimer = setInterval(loadClientChat, 5000);
+    }else if(clientChatPollTimer){
+      clearInterval(clientChatPollTimer);
+      clientChatPollTimer = null;
+    }
   });
-  chatCloseBtn.addEventListener('click', () => chatPanel.classList.remove('open'));
+  chatCloseBtn.addEventListener('click', () => {
+    chatPanel.classList.remove('open');
+    if(clientChatPollTimer){ clearInterval(clientChatPollTimer); clientChatPollTimer = null; }
+  });
 
   async function loadClientChat(){
     if(!supabase) return;
@@ -824,22 +842,16 @@
     currentAdminConversation = convId;
     conversationsList.querySelectorAll('.conv-entry').forEach(b => b.classList.toggle('active', b.dataset.id === convId));
     adminChatForm.style.display = 'flex';
-    try{
-      const { data, error } = await supabase.from('messages').select('*').eq('conversation_id', convId).order('created_at', {ascending:true});
-      if(!error && data) renderChatBubbles(adminChatMessages, data);
-    }catch(e){ console.error('Erreur de chargement de la conversation', e); }
+    async function refreshConv(){
+      try{
+        const { data, error } = await supabase.from('messages').select('*').eq('conversation_id', convId).order('created_at', {ascending:true});
+        if(!error && data) renderChatBubbles(adminChatMessages, data);
+      }catch(e){ console.error('Erreur de chargement de la conversation', e); }
+    }
+    await refreshConv();
     if(adminConvChannel){ supabase.removeChannel(adminConvChannel); adminConvChannel = null; }
-    adminConvChannel = supabase.channel('chat-admin-' + convId)
-      .on('postgres_changes', { event:'INSERT', schema:'public', table:'messages', filter:`conversation_id=eq.${convId}` }, payload => {
-        if(payload.new.conversation_id !== currentAdminConversation) return;
-        const bubble = document.createElement('div');
-        bubble.className = 'chat-bubble ' + (payload.new.sender === 'client' ? 'client' : 'admin');
-        bubble.textContent = payload.new.text;
-        if(adminChatMessages.querySelector('.chat-empty')) adminChatMessages.innerHTML = '';
-        adminChatMessages.appendChild(bubble);
-        adminChatMessages.scrollTop = adminChatMessages.scrollHeight;
-      })
-      .subscribe();
+    if(adminConvPollTimer){ clearInterval(adminConvPollTimer); adminConvPollTimer = null; }
+    adminConvPollTimer = setInterval(refreshConv, 5000);
   }
 
   adminChatForm.addEventListener('submit', async function(e){
