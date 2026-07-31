@@ -142,6 +142,27 @@
   const cartBtn = document.getElementById('cartBtn');
   const cartCount = document.getElementById('cartCount');
   const ordersCard = document.getElementById('ordersCard');
+  const ordersBadge = document.getElementById('ordersBadge');
+  let knownOrderIds = null;
+  let ordersPollTimer = null;
+
+  function playOrderChime(){
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [880, 1108].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime + i * 0.16);
+        gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + i * 0.16 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + i * 0.16 + 0.35);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + i * 0.16);
+        osc.stop(ctx.currentTime + i * 0.16 + 0.4);
+      });
+    }catch(e){ /* audio not available, ignore */ }
+  }
   const messagesCard = document.getElementById('messagesCard');
   const ordersList = document.getElementById('ordersList');
   const conversationsList = document.getElementById('conversationsList');
@@ -484,8 +505,24 @@
     ordersCard.style.display = loggedIn ? '' : 'none';
     messagesCard.style.display = loggedIn ? '' : 'none';
     adminTopbar.style.display = loggedIn ? 'flex' : 'none';
-    if(loggedIn){ loadOrders(); loadConversations(); }
+    if(loggedIn){
+      loadOrders(false);
+      loadConversations();
+      if(!ordersPollTimer){
+        ordersPollTimer = setInterval(() => loadOrders(true), 15000);
+      }
+    }else{
+      if(ordersPollTimer){ clearInterval(ordersPollTimer); ordersPollTimer = null; }
+      knownOrderIds = null;
+      ordersBadge.style.display = 'none';
+      ordersBadge.textContent = '0';
+    }
   }
+
+  ordersCard.addEventListener('click', () => {
+    ordersBadge.style.display = 'none';
+    ordersBadge.textContent = '0';
+  });
 
   loginForm.addEventListener('submit', function(e){
     e.preventDefault();
@@ -678,11 +715,28 @@
     }
   });
 
-  async function loadOrders(){
+  async function loadOrders(isPoll){
     if(!supabase) return;
     try{
       const { data, error } = await supabase.from('orders').select('*').order('created_at', {ascending:false});
       if(error || !data){ ordersList.innerHTML = '<div class="cart-empty">Erreur de chargement.</div>'; return; }
+
+      const currentIds = new Set(data.map(o => o.id));
+      if(knownOrderIds === null){
+        // Premier chargement : on mémorise l'état sans notifier.
+        knownOrderIds = currentIds;
+      }else{
+        const newOnes = data.filter(o => !knownOrderIds.has(o.id));
+        if(newOnes.length > 0){
+          if(isPoll) playOrderChime();
+          const unread = parseInt(ordersBadge.textContent || '0', 10) || 0;
+          const total = unread + newOnes.length;
+          ordersBadge.textContent = String(total);
+          ordersBadge.style.display = 'inline-flex';
+        }
+        knownOrderIds = currentIds;
+      }
+
       if(data.length === 0){ ordersList.innerHTML = '<div class="cart-empty">Aucune commande pour le moment.</div>'; return; }
       ordersList.innerHTML = data.map(o => {
         const items = (o.items || []).map(it => `${it.name} ×${it.qty}`).join(', ');
