@@ -253,6 +253,21 @@
       }
     }catch(e){ console.error('Erreur de sauvegarde produits', e); }
   }
+  async function upsertProductRemote(p){
+    if(!supabase) return;
+    try{
+      const row = { id:p.id, img:p.img, name:p.name, price:p.price, cat:p.cat, badge:!!p.badge };
+      const { error } = await supabase.from('products').upsert(row);
+      if(error) console.error('Erreur de sauvegarde du produit', error);
+    }catch(e){ console.error('Erreur de sauvegarde du produit', e); }
+  }
+  async function deleteProductRemote(id){
+    if(!supabase) return;
+    try{
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if(error) console.error('Erreur de suppression du produit', error);
+    }catch(e){ console.error('Erreur de suppression du produit', e); }
+  }
   async function saveAds(){
     if(!supabase) return;
     try{
@@ -302,7 +317,7 @@
       btn.addEventListener('click', () => {
         products = products.filter(p => p.id !== btn.dataset.id);
         if(editingId === btn.dataset.id) cancelEdit();
-        saveProducts();
+        deleteProductRemote(btn.dataset.id);
         renderProducts();
       });
     });
@@ -584,6 +599,7 @@
     }
     try{
       const dataUrl = hasFile ? await fileToDataUrl(prodImg.files[0]) : null;
+      let savedProduct;
       if(editingId){
         const p = products.find(x => x.id === editingId);
         if(p){
@@ -591,13 +607,16 @@
           p.price = price;
           p.cat = cat;
           if(dataUrl){ p.img = dataUrl; p.svg = null; p.bg = null; }
+          savedProduct = p;
         }
         msg.textContent = 'Produit mis à jour.';
       }else{
-        products.unshift({ id:'prod-'+Date.now(), img:dataUrl, name, price, cat, badge:true });
+        const newProduct = { id:'prod-'+Date.now(), img:dataUrl, name, price, cat, badge:true };
+        products.unshift(newProduct);
+        savedProduct = newProduct;
         msg.textContent = 'Produit ajouté à la boutique.';
       }
-      await saveProducts();
+      if(savedProduct) await upsertProductRemote(savedProduct);
       renderProducts();
       resetProductForm();
       msg.className = 'admin-msg ok';
