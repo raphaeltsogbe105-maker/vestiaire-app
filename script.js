@@ -261,7 +261,7 @@
   }
   async function upsertProductRemote(p){
     if(!supabase) throw new Error('Connexion à la base de données indisponible.');
-    const row = { id:p.id, img:p.img, name:p.name, price:p.price, cat:p.cat, badge:!!p.badge, stock: (p.stock === undefined ? null : p.stock) };
+    const row = { id:p.id, img:p.img, name:p.name, price:p.price, cat:p.cat, badge:!!p.badge, stock: (p.stock === undefined ? null : p.stock), sold: (p.sold || 0) };
     const { error } = await supabase.from('products').upsert(row);
     if(error){
       console.error('Erreur de sauvegarde du produit', error);
@@ -315,6 +315,7 @@
         <div class="product-name">${escapeHtml(p.name)}</div>
         <div class="product-price">${formatPrice(p.price)}</div>
         ${(p.stock !== null && p.stock !== undefined && p.stock > 0) ? `<div class="stock-note">${p.stock} en stock</div>` : ''}
+        <div class="admin-stock-info">Vendu : ${p.sold || 0} · Reste : ${(p.stock === null || p.stock === undefined) ? 'illimité' : p.stock}</div>
         <button class="btn-order" type="button" data-id="${p.id}" ${outOfStock ? 'disabled' : ''}>${outOfStock ? 'Épuisé' : 'Ajouter au panier'}</button>
       `;
       productGrid.appendChild(card);
@@ -769,8 +770,11 @@
       }
       for(const item of cart){
         const p = products.find(x => x.id === item.id);
-        if(p && p.stock !== null && p.stock !== undefined){
-          p.stock = Math.max(0, p.stock - item.qty);
+        if(p){
+          p.sold = (p.sold || 0) + item.qty;
+          if(p.stock !== null && p.stock !== undefined){
+            p.stock = Math.max(0, p.stock - item.qty);
+          }
           upsertProductRemote(p).catch(err => console.error('Erreur mise à jour stock', err));
         }
       }
