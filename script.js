@@ -182,7 +182,6 @@
   const chatToggleBtn = document.getElementById('chatToggleBtn');
   const chatPanel = document.getElementById('chatPanel');
   const chatCloseBtn = document.getElementById('chatCloseBtn');
-  const chatDeleteBtn = document.getElementById('chatDeleteBtn');
   const chatMessages = document.getElementById('chatMessages');
   const chatForm = document.getElementById('chatForm');
   const chatInput = document.getElementById('chatInput');
@@ -937,13 +936,28 @@
   }
 
   // ---------- Chat ----------
-  function renderChatBubbles(container, messages){
+  function renderChatBubbles(container, messages, allowDelete){
     if(messages.length === 0){
       container.innerHTML = "<div class=\"chat-empty\">Aucun message pour l'instant. Écrivez-nous !</div>";
       return;
     }
-    container.innerHTML = messages.map(m => `<div class="chat-bubble ${m.sender === 'client' ? 'client' : 'admin'}">${escapeHtml(m.text)}</div>`).join('');
+    container.innerHTML = messages.map(m => {
+      const isClient = m.sender === 'client';
+      const delBtn = (allowDelete && isClient) ? `<button type="button" class="msg-del" data-msg-id="${m.id}" aria-label="Effacer ce message">×</button>` : '';
+      return `<div class="chat-bubble ${isClient ? 'client' : 'admin'}">${escapeHtml(m.text)}${delBtn}</div>`;
+    }).join('');
     container.scrollTop = container.scrollHeight;
+    if(allowDelete){
+      container.querySelectorAll('.msg-del').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if(!confirm('Effacer ce message ?')) return;
+          try{
+            if(supabase) await supabase.from('messages').delete().eq('id', btn.dataset.msgId);
+            loadClientChat();
+          }catch(e){ console.error('Erreur suppression message', e); }
+        });
+      });
+    }
   }
 
   let adminConvListPollTimer = null;
@@ -960,21 +974,13 @@
   chatCloseBtn.addEventListener('click', () => {
     chatPanel.classList.remove('open');
   });
-  chatDeleteBtn.addEventListener('click', async () => {
-    if(!confirm('Effacer toute la conversation ? Cette action est définitive.')) return;
-    try{
-      if(supabase) await supabase.from('messages').delete().eq('conversation_id', clientId);
-      knownClientMsgIds = null;
-      chatMessages.innerHTML = '<div class="chat-empty">Aucun message pour le moment.</div>';
-    }catch(e){ console.error('Erreur suppression conversation client', e); }
-  });
 
   async function loadClientChat(){
     if(!supabase) return;
     try{
       const { data, error } = await supabase.from('messages').select('*').eq('conversation_id', clientId).order('created_at', {ascending:true});
       if(!error && data){
-        renderChatBubbles(chatMessages, data);
+        renderChatBubbles(chatMessages, data, true);
         const currentIds = new Set(data.map(m => m.id));
         if(knownClientMsgIds === null){
           knownClientMsgIds = currentIds;
