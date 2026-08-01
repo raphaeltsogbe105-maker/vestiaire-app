@@ -761,24 +761,14 @@
       phone,
       address: note,
       items: cart.map(c => ({ id:c.id, name:c.name, price:c.price, qty:c.qty })),
-      total: cartTotal()
+      total: cartTotal(),
+      validated: false
     };
     try{
       if(supabase){
         const { error } = await supabase.from('orders').insert(order);
         if(error) console.error("Erreur d'enregistrement de la commande", error);
       }
-      for(const item of cart){
-        const p = products.find(x => x.id === item.id);
-        if(p){
-          p.sold = (p.sold || 0) + item.qty;
-          if(p.stock !== null && p.stock !== undefined){
-            p.stock = Math.max(0, p.stock - item.qty);
-          }
-          upsertProductRemote(p).catch(err => console.error('Erreur mise à jour stock', err));
-        }
-      }
-      renderProducts();
       orderMsg.textContent = 'Commande envoyée ! Vous pouvez aussi confirmer via WhatsApp.';
       orderMsg.className = 'admin-msg ok';
       cart = [];
@@ -877,12 +867,15 @@
         const items = (o.items || []).map(it => `${it.name} ×${it.qty}`).join(', ');
         const date = o.created_at ? new Date(o.created_at).toLocaleString('fr-FR') : '';
         return `
-          <div class="order-entry" data-order-id="${o.id}">
+          <div class="order-entry${o.validated ? ' validated' : ''}" data-order-id="${o.id}">
             <button type="button" class="order-del" data-order-id="${o.id}" aria-label="Supprimer la commande">×</button>
             <div class="oe-head"><span>${escapeHtml(o.customer_name)}</span><span>${formatPrice(o.total)}</span></div>
             <div class="oe-items">${escapeHtml(items)}</div>
             <div>${escapeHtml(o.phone)}${o.address ? ' — ' + escapeHtml(o.address) : ''}</div>
             <div class="oe-total">${date}</div>
+            ${o.validated
+              ? '<div class="oe-validated">✓ Vente confirmée, stock mis à jour</div>'
+              : `<button type="button" class="order-validate" data-order-id="${o.id}">Valider la vente</button>`}
           </div>`;
       }).join('');
       ordersList.querySelectorAll('.order-del').forEach(btn => {
@@ -895,6 +888,37 @@
             knownOrderIds && knownOrderIds.delete(id);
             loadOrders(false);
           }catch(err){ console.error('Erreur suppression commande', err); }
+        });
+      });
+      ordersList.querySelectorAll('.order-validate').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.orderId;
+          const order = data.find(o => o.id === id);
+          if(!order) return;
+          if(!confirm('Confirmer cette vente et réduire le stock des articles concernés ?')) return;
+          btn.disabled = true;
+          btn.textContent = 'Validation...';
+          try{
+            for(const item of (order.items || [])){
+              const p = products.find(x => x.id === item.id);
+              if(p){
+                p.sold = (p.sold || 0) + item.qty;
+                if(p.stock !== null && p.stock !== undefined){
+                  p.stock = Math.max(0, p.stock - item.qty);
+                }
+                await upsertProductRemote(p);
+              }
+            }
+            await supabase.from('orders').update({ validated:true }).eq('id', id);
+            renderProducts();
+            checkStockAlerts(false);
+            loadOrders(false);
+          }catch(err){
+            console.error('Erreur validation commande', err);
+            btn.disabled = false;
+            btn.textContent = 'Valider la vente';
+          }
         });
       });
     }catch(e){ console.error('Erreur de chargement des commandes', e); }

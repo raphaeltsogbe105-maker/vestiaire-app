@@ -298,6 +298,14 @@
     background:rgba(214,59,59,0.15); color:#e07a7a; font-size:14px; line-height:1; cursor:pointer;
   }
   .order-del:hover{background:#d63b3b; color:#fff;}
+  .order-entry.validated{border-color:rgba(90,160,90,0.4); background:rgba(90,160,90,0.08);}
+  .order-validate{
+    margin-top:8px; width:100%; padding:8px; border:none; border-radius:6px; cursor:pointer;
+    background:var(--tan); color:#fff; font-size:12px; font-weight:700;
+  }
+  .order-validate:hover{background:var(--tan-dark, #8a6142);}
+  .order-validate:disabled{opacity:0.6; cursor:not-allowed;}
+  .oe-validated{margin-top:8px; font-size:11.5px; color:#7fbf7f; font-weight:600;}
   .conversations-list{display:flex; flex-direction:column; gap:6px; max-height:200px; overflow-y:auto; margin-bottom:10px;}
   .conv-row{display:flex; align-items:center; gap:6px;}
   .conv-entry{
