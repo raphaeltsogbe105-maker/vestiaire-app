@@ -762,7 +762,8 @@
       address: note,
       items: cart.map(c => ({ id:c.id, name:c.name, price:c.price, qty:c.qty })),
       total: cartTotal(),
-      validated: false
+      validated: false,
+      client_id: clientId
     };
     try{
       if(!supabase) throw new Error('Connexion à la base de données indisponible.');
@@ -910,6 +911,17 @@
               }
             }
             await supabase.from('orders').update({ validated:true }).eq('id', id);
+            if(order.client_id){
+              const itemsList = (order.items || []).map(it => it.name).join(', ');
+              try{
+                await supabase.from('messages').insert({
+                  id: 'msg-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),
+                  conversation_id: order.client_id,
+                  sender: 'admin',
+                  text: `Votre commande (${itemsList}) a été confirmée ✅. Merci pour votre achat !`
+                });
+              }catch(msgErr){ console.error('Erreur envoi confirmation client', msgErr); }
+            }
             renderProducts();
             checkStockAlerts(false);
             loadOrders(false);
