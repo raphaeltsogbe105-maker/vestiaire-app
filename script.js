@@ -765,10 +765,9 @@
       validated: false
     };
     try{
-      if(supabase){
-        const { error } = await supabase.from('orders').insert(order);
-        if(error) console.error("Erreur d'enregistrement de la commande", error);
-      }
+      if(!supabase) throw new Error('Connexion à la base de données indisponible.');
+      const { error } = await supabase.from('orders').insert(order);
+      if(error) throw new Error(error.message || "Échec de l'enregistrement de la commande.");
       orderMsg.textContent = 'Commande envoyée ! Vous pouvez aussi confirmer via WhatsApp.';
       orderMsg.className = 'admin-msg ok';
       cart = [];
@@ -777,7 +776,7 @@
       renderCartModal();
       this.reset();
     }catch(err){
-      orderMsg.textContent = "Erreur lors de l'envoi de la commande.";
+      orderMsg.textContent = 'Erreur : ' + (err && err.message ? err.message : "l'envoi de la commande a échoué.");
       orderMsg.className = 'admin-msg err';
     }
   });
