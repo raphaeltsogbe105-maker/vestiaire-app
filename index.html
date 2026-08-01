@@ -56,8 +56,9 @@
       </div>
 
       <div class="admin-card" id="productCard" style="display:none;">
-        <h3>Ajouter / modifier un produit</h3>
+        <h3>Ajouter / modifier un produit <span id="stockBadge" class="orders-badge" style="display:none;">0</span></h3>
         <div class="sub">Logo ou photo, nom, prix en F CFA et catégorie — modifiables à tout moment via le bouton "crayon" sur chaque produit.</div>
+        <div id="stockAlertList" class="stock-alert-list"></div>
         <form id="productForm">
           <div class="field-row">
             <div class="field">

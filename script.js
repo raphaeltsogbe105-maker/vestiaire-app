@@ -147,6 +147,7 @@
   const ordersBadge = document.getElementById('ordersBadge');
   let knownOrderIds = null;
   let ordersPollTimer = null;
+  let stockPollTimer = null;
 
   function playOrderChime(){
     try{
@@ -168,8 +169,11 @@
   const messagesCard = document.getElementById('messagesCard');
   const messagesBadge = document.getElementById('messagesBadge');
   const chatToggleBadge = document.getElementById('chatToggleBadge');
+  const stockBadge = document.getElementById('stockBadge');
+  const stockAlertList = document.getElementById('stockAlertList');
   let knownAdminMsgIds = null;
   let knownClientMsgIds = null;
+  let knownOutOfStockIds = null;
   const ordersList = document.getElementById('ordersList');
   const conversationsList = document.getElementById('conversationsList');
   const adminChatMessages = document.getElementById('adminChatMessages');
@@ -535,22 +539,30 @@
     if(loggedIn){
       loadOrders(false);
       loadConversations();
+      checkStockAlerts(false);
       if(!ordersPollTimer){
         ordersPollTimer = setInterval(() => loadOrders(true), 15000);
       }
       if(!adminConvListPollTimer){
         adminConvListPollTimer = setInterval(loadConversations, 8000);
       }
+      if(!stockPollTimer){
+        stockPollTimer = setInterval(() => checkStockAlerts(true), 15000);
+      }
     }else{
       if(ordersPollTimer){ clearInterval(ordersPollTimer); ordersPollTimer = null; }
       if(adminConvListPollTimer){ clearInterval(adminConvListPollTimer); adminConvListPollTimer = null; }
       if(adminConvPollTimer){ clearInterval(adminConvPollTimer); adminConvPollTimer = null; }
+      if(stockPollTimer){ clearInterval(stockPollTimer); stockPollTimer = null; }
       knownOrderIds = null;
       ordersBadge.style.display = 'none';
       ordersBadge.textContent = '0';
       knownAdminMsgIds = null;
       messagesBadge.style.display = 'none';
       messagesBadge.textContent = '0';
+      knownOutOfStockIds = null;
+      stockBadge.style.display = 'none';
+      stockBadge.textContent = '0';
     }
   }
 
@@ -626,6 +638,7 @@
         savedProduct = newProduct;
       }
       if(savedProduct) await upsertProductRemote(savedProduct);
+      checkStockAlerts(false);
       msg.textContent = editingId ? 'Produit mis à jour.' : 'Produit ajouté à la boutique.';
       renderProducts();
       resetProductForm();
@@ -774,6 +787,33 @@
       orderMsg.className = 'admin-msg err';
     }
   });
+
+  async function checkStockAlerts(isPoll){
+    if(!supabase || !stockBadge) return;
+    try{
+      const { data, error } = await supabase.from('products').select('id,name,stock');
+      if(error || !data) return;
+      const emptyOnes = data.filter(p => p.stock !== null && p.stock !== undefined && p.stock <= 0);
+      const currentIds = new Set(emptyOnes.map(p => p.id));
+
+      if(knownOutOfStockIds === null){
+        knownOutOfStockIds = currentIds;
+      }else{
+        const newlyEmpty = emptyOnes.filter(p => !knownOutOfStockIds.has(p.id));
+        if(newlyEmpty.length > 0 && isPoll) playOrderChime();
+        knownOutOfStockIds = currentIds;
+      }
+
+      if(emptyOnes.length > 0){
+        stockBadge.textContent = String(emptyOnes.length);
+        stockBadge.style.display = 'inline-flex';
+        stockAlertList.innerHTML = emptyOnes.map(p => `<div class="stock-alert-row"><span>${escapeHtml(p.name)}</span><span>Épuisé</span></div>`).join('');
+      }else{
+        stockBadge.style.display = 'none';
+        stockAlertList.innerHTML = '';
+      }
+    }catch(e){ console.error('Erreur de vérification du stock', e); }
+  }
 
   function renderSalesReport(orders){
     if(!salesReport) return;
