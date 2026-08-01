@@ -182,6 +182,7 @@
   const chatToggleBtn = document.getElementById('chatToggleBtn');
   const chatPanel = document.getElementById('chatPanel');
   const chatCloseBtn = document.getElementById('chatCloseBtn');
+  const chatDeleteBtn = document.getElementById('chatDeleteBtn');
   const chatMessages = document.getElementById('chatMessages');
   const chatForm = document.getElementById('chatForm');
   const chatInput = document.getElementById('chatInput');
@@ -958,6 +959,14 @@
   });
   chatCloseBtn.addEventListener('click', () => {
     chatPanel.classList.remove('open');
+  });
+  chatDeleteBtn.addEventListener('click', async () => {
+    if(!confirm('Effacer toute la conversation ? Cette action est définitive.')) return;
+    try{
+      if(supabase) await supabase.from('messages').delete().eq('conversation_id', clientId);
+      knownClientMsgIds = null;
+      chatMessages.innerHTML = '<div class="chat-empty">Aucun message pour le moment.</div>';
+    }catch(e){ console.error('Erreur suppression conversation client', e); }
   });
 
   async function loadClientChat(){
