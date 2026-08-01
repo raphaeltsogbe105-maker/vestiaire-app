@@ -142,6 +142,8 @@
   const cartBtn = document.getElementById('cartBtn');
   const cartCount = document.getElementById('cartCount');
   const ordersCard = document.getElementById('ordersCard');
+  const salesReportCard = document.getElementById('salesReportCard');
+  const salesReport = document.getElementById('salesReport');
   const ordersBadge = document.getElementById('ordersBadge');
   let knownOrderIds = null;
   let ordersPollTimer = null;
@@ -255,7 +257,7 @@
   }
   async function upsertProductRemote(p){
     if(!supabase) throw new Error('Connexion à la base de données indisponible.');
-    const row = { id:p.id, img:p.img, name:p.name, price:p.price, cat:p.cat, badge:!!p.badge };
+    const row = { id:p.id, img:p.img, name:p.name, price:p.price, cat:p.cat, badge:!!p.badge, stock: (p.stock === undefined ? null : p.stock) };
     const { error } = await supabase.from('products').upsert(row);
     if(error){
       console.error('Erreur de sauvegarde du produit', error);
@@ -294,8 +296,9 @@
       const visual = p.img
         ? `<img src="${p.img}" alt="${escapeHtml(p.name)}">`
         : (p.svg || '');
+      const outOfStock = p.stock !== null && p.stock !== undefined && p.stock <= 0;
       card.innerHTML = `
-        ${p.badge ? '<div class="new-badge">Nouveau</div>' : ''}
+        ${outOfStock ? '<div class="sold-badge">Épuisé</div>' : (p.badge ? '<div class="new-badge">Nouveau</div>' : '')}
         <div class="card-actions">
           <button class="prod-edit" type="button" aria-label="Modifier le produit" data-id="${p.id}">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 3.3a1 1 0 0 1 1.4 0l1.6 1.6a1 1 0 0 1 0 1.4L7 17l-4 1 1-4z"/></svg>
@@ -307,7 +310,8 @@
         <div class="product-visual" style="background:${p.bg || '#e3d9c4'};">${visual}</div>
         <div class="product-name">${escapeHtml(p.name)}</div>
         <div class="product-price">${formatPrice(p.price)}</div>
-        <button class="btn-order" type="button" data-id="${p.id}">Ajouter au panier</button>
+        ${(p.stock !== null && p.stock !== undefined && p.stock > 0) ? `<div class="stock-note">${p.stock} en stock</div>` : ''}
+        <button class="btn-order" type="button" data-id="${p.id}" ${outOfStock ? 'disabled' : ''}>${outOfStock ? 'Épuisé' : 'Ajouter au panier'}</button>
       `;
       productGrid.appendChild(card);
     });
@@ -452,6 +456,7 @@
   const prodName = document.getElementById('prodName');
   const prodPrice = document.getElementById('prodPrice');
   const prodCat = document.getElementById('prodCat');
+  const prodStock = document.getElementById('prodStock');
   const prodSubmitBtn = document.getElementById('prodSubmitBtn');
   const prodCancelBtn = document.getElementById('prodCancelBtn');
 
@@ -462,6 +467,7 @@
     prodName.value = p.name;
     prodPrice.value = Math.round(p.price);
     prodCat.value = p.cat;
+    prodStock.value = (p.stock === null || p.stock === undefined) ? '' : p.stock;
     prodImg.required = false;
     prodSubmitBtn.textContent = 'Enregistrer les modifications';
     prodCancelBtn.style.display = 'inline-flex';
@@ -523,6 +529,7 @@
     productCard.style.display = loggedIn ? '' : 'none';
     adCard.style.display = loggedIn ? '' : 'none';
     ordersCard.style.display = loggedIn ? '' : 'none';
+    salesReportCard.style.display = loggedIn ? '' : 'none';
     messagesCard.style.display = loggedIn ? '' : 'none';
     adminTopbar.style.display = loggedIn ? 'flex' : 'none';
     if(loggedIn){
@@ -591,6 +598,8 @@
     const name = prodName.value.trim();
     const price = parseFloat(prodPrice.value);
     const cat = prodCat.value;
+    const stockRaw = prodStock.value.trim();
+    const stock = stockRaw === '' ? null : Math.max(0, parseInt(stockRaw, 10));
     const hasFile = !!prodImg.files[0];
 
     if(!name || isNaN(price) || (!editingId && !hasFile)){
@@ -607,11 +616,12 @@
           p.name = name;
           p.price = price;
           p.cat = cat;
+          p.stock = stock;
           if(dataUrl){ p.img = dataUrl; p.svg = null; p.bg = null; }
           savedProduct = p;
         }
       }else{
-        const newProduct = { id:'prod-'+Date.now(), img:dataUrl, name, price, cat, badge:true };
+        const newProduct = { id:'prod-'+Date.now(), img:dataUrl, name, price, cat, stock, badge:true };
         products.unshift(newProduct);
         savedProduct = newProduct;
       }
@@ -660,8 +670,14 @@
   function addToCart(id){
     const p = products.find(x => x.id === id);
     if(!p) return;
+    if(p.stock !== null && p.stock !== undefined && p.stock <= 0) return;
     const existing = cart.find(c => c.id === id);
-    if(existing){ existing.qty += 1; } else { cart.push({ id:p.id, name:p.name, price:p.price, img:p.img, qty:1 }); }
+    if(existing){
+      if(p.stock !== null && p.stock !== undefined && existing.qty >= p.stock) return;
+      existing.qty += 1;
+    }else{
+      cart.push({ id:p.id, name:p.name, price:p.price, img:p.img, qty:1 });
+    }
     saveCartLocal();
     updateCartBadge();
   }
@@ -738,6 +754,14 @@
         const { error } = await supabase.from('orders').insert(order);
         if(error) console.error("Erreur d'enregistrement de la commande", error);
       }
+      for(const item of cart){
+        const p = products.find(x => x.id === item.id);
+        if(p && p.stock !== null && p.stock !== undefined){
+          p.stock = Math.max(0, p.stock - item.qty);
+          upsertProductRemote(p).catch(err => console.error('Erreur mise à jour stock', err));
+        }
+      }
+      renderProducts();
       orderMsg.textContent = 'Commande envoyée ! Vous pouvez aussi confirmer via WhatsApp.';
       orderMsg.className = 'admin-msg ok';
       cart = [];
@@ -750,6 +774,35 @@
       orderMsg.className = 'admin-msg err';
     }
   });
+
+  function renderSalesReport(orders){
+    if(!salesReport) return;
+    const totalRevenue = orders.reduce((sum,o) => sum + (Number(o.total) || 0), 0);
+    const totalOrders = orders.length;
+    const itemCounts = {};
+    orders.forEach(o => {
+      (o.items || []).forEach(it => {
+        const key = it.name || 'Produit';
+        if(!itemCounts[key]) itemCounts[key] = { qty:0, revenue:0 };
+        itemCounts[key].qty += (it.qty || 0);
+        itemCounts[key].revenue += (it.qty || 0) * (it.price || 0);
+      });
+    });
+    const topProducts = Object.entries(itemCounts)
+      .sort((a,b) => b[1].qty - a[1].qty)
+      .slice(0, 5);
+
+    salesReport.innerHTML = `
+      <div class="sr-stats">
+        <div class="sr-stat"><div class="sr-num">${formatPrice(totalRevenue)}</div><div class="sr-label">Chiffre d'affaires</div></div>
+        <div class="sr-stat"><div class="sr-num">${totalOrders}</div><div class="sr-label">Commande${totalOrders > 1 ? 's' : ''}</div></div>
+        <div class="sr-stat"><div class="sr-num">${totalOrders ? formatPrice(Math.round(totalRevenue/totalOrders)) : formatPrice(0)}</div><div class="sr-label">Panier moyen</div></div>
+      </div>
+      ${topProducts.length ? `<div class="sr-top-list">
+        ${topProducts.map(([name, v]) => `<div class="sr-top-row"><span>${escapeHtml(name)} ×${v.qty}</span><span>${formatPrice(v.revenue)}</span></div>`).join('')}
+      </div>` : ''}
+    `;
+  }
 
   async function loadOrders(isPoll){
     if(!supabase) return;
@@ -772,6 +825,8 @@
         }
         knownOrderIds = currentIds;
       }
+
+      renderSalesReport(data);
 
       if(data.length === 0){ ordersList.innerHTML = '<div class="cart-empty">Aucune commande pour le moment.</div>'; return; }
       ordersList.innerHTML = data.map(o => {

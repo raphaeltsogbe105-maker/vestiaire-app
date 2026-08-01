@@ -85,6 +85,10 @@
                 <option value="Sport">Sport</option>
               </select>
             </div>
+            <div class="field">
+              <label>Stock (laisser vide = illimité)</label>
+              <input type="number" id="prodStock" step="1" min="0" placeholder="Ex. 5">
+            </div>
           </div>
           <div class="field-row" style="align-items:center; gap:14px;">
             <button type="submit" class="admin-submit" id="prodSubmitBtn">Ajouter le produit</button>
@@ -118,6 +122,12 @@
           <div class="admin-msg" id="adMsg"></div>
         </form>
         <div class="admin-hint">Les prix sont désormais en F CFA. Le bouton "Changer l'image" est toujours visible directement sur le visuel principal en haut de page (à côté du badge -50%). Sur chaque produit, le crayon permet de modifier son nom, son prix ou son logo/photo à tout moment, et le "×" le retire.</div>
+      </div>
+
+      <div class="admin-card" id="salesReportCard" style="display:none;">
+        <h3>Rapport des ventes</h3>
+        <div class="sub">Résumé calculé à partir des commandes reçues.</div>
+        <div id="salesReport" class="sales-report"></div>
       </div>
 
       <div class="admin-card" id="ordersCard" style="display:none;">
