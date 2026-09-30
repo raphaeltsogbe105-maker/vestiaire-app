@@ -13,10 +13,10 @@
 
 <header>
   <nav class="nav">
-    <a href="#" class="logo">VESTIAIRE</a>
+    <a href="#" class="logo" id="navLogo">VESTIAIRE</a>
     <div class="nav-links">
-      <a href="#">Accueil</a><a href="#">Homme</a><a href="#">Femme</a><a href="#">Accessoires</a>
-      <a href="#" class="sale">Soldes</a>
+      <a href="#" id="navAccueil">Accueil</a><a href="#" id="navHomme">Homme</a><a href="#" id="navFemme">Femme</a><a href="#" id="navAccessoires">Accessoires</a>
+      <a href="#" class="sale" id="navSoldes">Soldes</a>
     </div>
     <div class="nav-right">
       <button class="cart-btn" id="cartBtn" type="button" aria-label="Panier">
@@ -86,6 +86,16 @@
                 <option value="Sport">Sport</option>
               </select>
             </div>
+            <div class="field">
+              <label>Genre</label>
+              <select id="prodGenre">
+                <option value="Unisexe">Unisexe</option>
+                <option value="Homme">Homme</option>
+                <option value="Femme">Femme</option>
+              </select>
+            </div>
+          </div>
+          <div class="field-row">
             <div class="field">
               <label>Stock (laisser vide = illimité)</label>
               <input type="number" id="prodStock" step="1" min="0" placeholder="Ex. 5">

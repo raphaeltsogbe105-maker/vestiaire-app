@@ -102,6 +102,7 @@
   let carIndex = 0;
   let carTimer = null;
   let currentFilter = 'Tous';
+  let currentGenre = 'Tous';
   let editingId = null;
 
   function formatPrice(v){
@@ -261,7 +262,7 @@
   }
   async function upsertProductRemote(p){
     if(!supabase) throw new Error('Connexion à la base de données indisponible.');
-    const row = { id:p.id, img:p.img, name:p.name, price:p.price, cat:p.cat, badge:!!p.badge, stock: (p.stock === undefined ? null : p.stock), sold: (p.sold || 0) };
+    const row = { id:p.id, img:p.img, name:p.name, price:p.price, cat:p.cat, genre: (p.genre || 'Unisexe'), badge:!!p.badge, stock: (p.stock === undefined ? null : p.stock), sold: (p.sold || 0) };
     const { error } = await supabase.from('products').upsert(row);
     if(error){
       console.error('Erreur de sauvegarde du produit', error);
@@ -289,7 +290,11 @@
 
   function renderProducts(){
     productGrid.innerHTML = '';
-    const list = currentFilter === 'Tous' ? products : products.filter(p => p.cat === currentFilter);
+    const list = products.filter(p => {
+      const matchCat = currentFilter === 'Tous' || p.cat === currentFilter;
+      const matchGenre = currentGenre === 'Tous' || !p.genre || p.genre === 'Unisexe' || p.genre === currentGenre;
+      return matchCat && matchGenre;
+    });
     if(list.length === 0){
       productGrid.innerHTML = '<div class="empty-note">Aucun produit dans cette catégorie pour le moment. Cliquez sur "Gérer la boutique" pour en ajouter un.</div>';
       return;
@@ -462,6 +467,7 @@
   const prodPrice = document.getElementById('prodPrice');
   const prodCat = document.getElementById('prodCat');
   const prodStock = document.getElementById('prodStock');
+  const prodGenre = document.getElementById('prodGenre');
   const prodSubmitBtn = document.getElementById('prodSubmitBtn');
   const prodCancelBtn = document.getElementById('prodCancelBtn');
 
@@ -472,6 +478,7 @@
     prodName.value = p.name;
     prodPrice.value = Math.round(p.price);
     prodCat.value = p.cat;
+    prodGenre.value = p.genre || 'Unisexe';
     prodStock.value = (p.stock === null || p.stock === undefined) ? '' : p.stock;
     prodImg.required = false;
     prodSubmitBtn.textContent = 'Enregistrer les modifications';
@@ -502,6 +509,54 @@
     currentFilter = btn.dataset.cat;
     this.querySelectorAll('.cat-filter').forEach(b => b.classList.toggle('active', b === btn));
     renderProducts();
+  });
+
+  function syncCatFilterButtons(){
+    document.querySelectorAll('#catFilters .cat-filter').forEach(b => {
+      b.classList.toggle('active', b.dataset.cat === currentFilter);
+    });
+  }
+
+  function goToProducts(cat, genre){
+    currentFilter = cat;
+    currentGenre = genre;
+    syncCatFilterButtons();
+    renderProducts();
+    const target = document.getElementById('produits');
+    if(target) target.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  document.getElementById('navAccueil').addEventListener('click', (e) => {
+    e.preventDefault();
+    currentFilter = 'Tous';
+    currentGenre = 'Tous';
+    syncCatFilterButtons();
+    renderProducts();
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+  document.getElementById('navHomme').addEventListener('click', (e) => {
+    e.preventDefault();
+    goToProducts('Tous', 'Homme');
+  });
+  document.getElementById('navFemme').addEventListener('click', (e) => {
+    e.preventDefault();
+    goToProducts('Tous', 'Femme');
+  });
+  document.getElementById('navAccessoires').addEventListener('click', (e) => {
+    e.preventDefault();
+    goToProducts('Objets', 'Tous');
+  });
+  document.getElementById('navSoldes').addEventListener('click', (e) => {
+    e.preventDefault();
+    goToProducts('Tous', 'Tous');
+  });
+  document.getElementById('navLogo').addEventListener('click', (e) => {
+    e.preventDefault();
+    currentFilter = 'Tous';
+    currentGenre = 'Tous';
+    syncCatFilterButtons();
+    renderProducts();
+    window.scrollTo({top:0, behavior:'smooth'});
   });
 
   heroEditBtn.addEventListener('click', ()=> heroFileInput.click());
@@ -611,6 +666,7 @@
     const name = prodName.value.trim();
     const price = parseFloat(prodPrice.value);
     const cat = prodCat.value;
+    const genre = prodGenre.value;
     const stockRaw = prodStock.value.trim();
     const stock = stockRaw === '' ? null : Math.max(0, parseInt(stockRaw, 10));
     const hasFile = !!prodImg.files[0];
@@ -629,12 +685,13 @@
           p.name = name;
           p.price = price;
           p.cat = cat;
+          p.genre = genre;
           p.stock = stock;
           if(dataUrl){ p.img = dataUrl; p.svg = null; p.bg = null; }
           savedProduct = p;
         }
       }else{
-        const newProduct = { id:'prod-'+Date.now(), img:dataUrl, name, price, cat, stock, badge:true };
+        const newProduct = { id:'prod-'+Date.now(), img:dataUrl, name, price, cat, genre, stock, badge:true };
         products.unshift(newProduct);
         savedProduct = newProduct;
       }
