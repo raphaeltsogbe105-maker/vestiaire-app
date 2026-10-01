@@ -217,7 +217,7 @@
       try{
         const { data, error } = await supabase.from('products').select('*').order('created_at', {ascending:false});
         if(!error && data && data.length){
-          products = data.map(r => ({ id:r.id, img:r.img, name:r.name, price:Number(r.price), cat:r.cat, badge:!!r.badge }));
+          products = data.map(r => ({ id:r.id, img:r.img, name:r.name, price:Number(r.price), cat:r.cat, genre:r.genre, badge:!!r.badge, stock:(r.stock === null || r.stock === undefined ? null : Number(r.stock)), sold:Number(r.sold || 0) }));
         }
       }catch(e){ console.error('Erreur de chargement des produits', e); }
       try{
