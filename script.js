@@ -145,10 +145,23 @@
   const ordersCard = document.getElementById('ordersCard');
   const salesReportCard = document.getElementById('salesReportCard');
   const salesReport = document.getElementById('salesReport');
+  const reviewsCard = document.getElementById('reviewsCard');
+  const reviewsBadge = document.getElementById('reviewsBadge');
+  const reviewsSummary = document.getElementById('reviewsSummary');
+  const reviewsList = document.getElementById('reviewsList');
+  const reviewForm = document.getElementById('reviewForm');
+  const starPicker = document.getElementById('starPicker');
+  const starLabel = document.getElementById('starLabel');
+  const reviewComment = document.getElementById('reviewComment');
+  const reviewSubmitBtn = document.getElementById('reviewSubmitBtn');
+  const reviewMsg = document.getElementById('reviewMsg');
+  let selectedStars = 0;
+  let knownReviewIds = null;
   const ordersBadge = document.getElementById('ordersBadge');
   let knownOrderIds = null;
   let ordersPollTimer = null;
   let stockPollTimer = null;
+  let reviewsPollTimer = null;
 
   function playOrderChime(){
     try{
@@ -591,11 +604,13 @@
     ordersCard.style.display = loggedIn ? '' : 'none';
     salesReportCard.style.display = loggedIn ? '' : 'none';
     messagesCard.style.display = loggedIn ? '' : 'none';
+    reviewsCard.style.display = loggedIn ? '' : 'none';
     adminTopbar.style.display = loggedIn ? 'flex' : 'none';
     if(loggedIn){
       loadOrders(false);
       loadConversations();
       checkStockAlerts(false);
+      loadReviews(false);
       if(!ordersPollTimer){
         ordersPollTimer = setInterval(() => loadOrders(true), 15000);
       }
@@ -605,11 +620,15 @@
       if(!stockPollTimer){
         stockPollTimer = setInterval(() => checkStockAlerts(true), 15000);
       }
+      if(!reviewsPollTimer){
+        reviewsPollTimer = setInterval(() => loadReviews(true), 15000);
+      }
     }else{
       if(ordersPollTimer){ clearInterval(ordersPollTimer); ordersPollTimer = null; }
       if(adminConvListPollTimer){ clearInterval(adminConvListPollTimer); adminConvListPollTimer = null; }
       if(adminConvPollTimer){ clearInterval(adminConvPollTimer); adminConvPollTimer = null; }
       if(stockPollTimer){ clearInterval(stockPollTimer); stockPollTimer = null; }
+      if(reviewsPollTimer){ clearInterval(reviewsPollTimer); reviewsPollTimer = null; }
       knownOrderIds = null;
       ordersBadge.style.display = 'none';
       ordersBadge.textContent = '0';
@@ -619,12 +638,20 @@
       knownOutOfStockIds = null;
       stockBadge.style.display = 'none';
       stockBadge.textContent = '0';
+      knownReviewIds = null;
+      reviewsBadge.style.display = 'none';
+      reviewsBadge.textContent = '0';
     }
   }
 
   ordersCard.addEventListener('click', () => {
     ordersBadge.style.display = 'none';
     ordersBadge.textContent = '0';
+  });
+
+  reviewsCard.addEventListener('click', () => {
+    reviewsBadge.style.display = 'none';
+    reviewsBadge.textContent = '0';
   });
 
   messagesCard.addEventListener('click', () => {
@@ -801,6 +828,55 @@
   orderCloseBtn.addEventListener('click', () => orderOverlay.classList.remove('open'));
   orderOverlay.addEventListener('click', (e) => { if(e.target === orderOverlay) orderOverlay.classList.remove('open'); });
 
+  const STAR_LABELS = { 1:'Moyen', 2:'Assez bien', 3:'Bien', 4:'Très bien', 5:'Excellent' };
+
+  function paintStars(n){
+    starPicker.querySelectorAll('.star-btn').forEach(btn => {
+      btn.classList.toggle('filled', parseInt(btn.dataset.star, 10) <= n);
+    });
+  }
+
+  starPicker.addEventListener('mouseover', (e) => {
+    const btn = e.target.closest('.star-btn');
+    if(!btn) return;
+    paintStars(parseInt(btn.dataset.star, 10));
+  });
+  starPicker.addEventListener('mouseleave', () => paintStars(selectedStars));
+  starPicker.addEventListener('click', (e) => {
+    const btn = e.target.closest('.star-btn');
+    if(!btn) return;
+    selectedStars = parseInt(btn.dataset.star, 10);
+    paintStars(selectedStars);
+    starLabel.textContent = STAR_LABELS[selectedStars] || '';
+    reviewSubmitBtn.disabled = false;
+  });
+
+  reviewForm.addEventListener('submit', async function(e){
+    e.preventDefault();
+    if(!selectedStars){ return; }
+    reviewMsg.textContent = '';
+    reviewMsg.className = 'admin-msg';
+    try{
+      if(!supabase) throw new Error('Connexion à la base de données indisponible.');
+      const { error } = await supabase.from('reviews').insert({
+        id: 'review-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),
+        stars: selectedStars,
+        comment: reviewComment.value.trim() || null
+      });
+      if(error) throw new Error(error.message || "Échec de l'enregistrement de l'avis.");
+      reviewMsg.textContent = 'Merci pour votre avis !';
+      reviewMsg.className = 'admin-msg ok';
+      selectedStars = 0;
+      paintStars(0);
+      starLabel.textContent = 'Touchez une étoile pour noter';
+      reviewComment.value = '';
+      reviewSubmitBtn.disabled = true;
+    }catch(err){
+      reviewMsg.textContent = 'Erreur : ' + (err && err.message ? err.message : "l'envoi a échoué.");
+      reviewMsg.className = 'admin-msg err';
+    }
+  });
+
   orderForm.addEventListener('submit', async function(e){
     e.preventDefault();
     if(cart.length === 0) return;
@@ -838,6 +914,46 @@
       orderMsg.className = 'admin-msg err';
     }
   });
+
+  async function loadReviews(isPoll){
+    if(!supabase || !reviewsList) return;
+    try{
+      const { data, error } = await supabase.from('reviews').select('*').order('created_at', {ascending:false});
+      if(error || !data){ reviewsList.innerHTML = '<div class="cart-empty">Erreur de chargement.</div>'; return; }
+
+      const currentIds = new Set(data.map(r => r.id));
+      if(knownReviewIds === null){
+        knownReviewIds = currentIds;
+      }else{
+        const newOnes = data.filter(r => !knownReviewIds.has(r.id));
+        if(newOnes.length > 0){
+          if(isPoll) playOrderChime();
+          const unread = parseInt(reviewsBadge.textContent || '0', 10) || 0;
+          reviewsBadge.textContent = String(unread + newOnes.length);
+          reviewsBadge.style.display = 'inline-flex';
+        }
+        knownReviewIds = currentIds;
+      }
+
+      const count = data.length;
+      const avg = count ? (data.reduce((s,r) => s + (r.stars||0), 0) / count) : 0;
+      reviewsSummary.innerHTML = `
+        <div class="sr-stats">
+          <div class="sr-stat"><div class="sr-num">${count ? avg.toFixed(1) : '—'}</div><div class="sr-label">Note moyenne / 5</div></div>
+          <div class="sr-stat"><div class="sr-num">${count}</div><div class="sr-label">Avis${count > 1 ? '' : ''}</div></div>
+        </div>`;
+
+      if(count === 0){ reviewsList.innerHTML = '<div class="cart-empty">Aucun avis pour le moment.</div>'; return; }
+      reviewsList.innerHTML = data.map(r => {
+        const date = r.created_at ? new Date(r.created_at).toLocaleString('fr-FR') : '';
+        return `<div class="review-entry">
+          <div class="re-stars">${'★'.repeat(r.stars || 0)}${'☆'.repeat(5 - (r.stars || 0))}</div>
+          ${r.comment ? `<div class="re-comment">${escapeHtml(r.comment)}</div>` : ''}
+          <div class="re-date">${date}</div>
+        </div>`;
+      }).join('');
+    }catch(e){ console.error('Erreur de chargement des avis', e); }
+  }
 
   async function checkStockAlerts(isPoll){
     if(!supabase || !stockBadge) return;
