@@ -799,6 +799,22 @@
     lines.push(`Total : ${formatPrice(cartTotal())}`);
     orderWhatsappBtn.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join('\n'))}`;
   }
+
+  orderWhatsappBtn.addEventListener('click', async function(){
+    if(!supabase || cart.length === 0) return;
+    try{
+      await supabase.from('orders').insert({
+        id: 'order-' + Date.now(),
+        customer_name: document.getElementById('orderName').value.trim() || 'Commande via WhatsApp',
+        phone: document.getElementById('orderPhone').value.trim() || '',
+        address: document.getElementById('orderNote').value.trim() || '',
+        items: cart.map(c => ({ id:c.id, name:c.name, price:c.price, qty:c.qty })),
+        total: cartTotal(),
+        validated: false,
+        client_id: clientId
+      });
+    }catch(err){ console.error('Erreur enregistrement commande WhatsApp', err); }
+  });
   function renderCartModal(){
     if(cart.length === 0){
       orderProductInfo.innerHTML = '<div class="cart-empty">Votre panier est vide.</div>';
